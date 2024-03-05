@@ -90,7 +90,8 @@ class DefaultValueJson:
         except Exception as err:
             logging.info(f"Could not read file: {file_path}, error: {err}, type: {type(err)}")
         json_data = json.loads(file_data)
-        DefaultValueJson.set_dict_to_zeros(json_data)
+        if json_data is dict:
+            DefaultValueJson.set_dict_to_zeros(json_data)
         try:
             with open(file_path, 'w') as file_to_write:
                 json.dump(json_data, file_to_write, indent=4)
