@@ -21,9 +21,15 @@ class Requirements:
             file_ext = os.path.splitext(path)[1].lower()
             match file_ext:
                 case ".ini":
-                    self._ini_files.add_file(path, df)
+                    try:
+                        self._ini_files.add_file(path, df)
+                    except Exception as err:
+                        logging.warning(f"Failed to add {path} to structure, error: {err}, type: {type(err)}")
                 case ".json":
-                    self._json_files.add_file(path, df)
+                    try:
+                        self._json_files.add_file(path, df)
+                    except Exception as err:
+                        logging.warning(f"Failed to add {path} to structure, error: {err}, type: {type(err)}")
 
     @property
     def ini_files(self):
@@ -33,7 +39,7 @@ class Requirements:
     def json_files(self):
         return self._json_files
 
-    def validate(self, version_path, files_to_skip: dict):
+    def validate(self, version_path: str, files_to_skip: dict):
         for root, dirs, files in os.walk(version_path, topdown=False):
             for filename in files:
                 curr_path = os.path.join(root, filename)
@@ -49,19 +55,27 @@ class Requirements:
                         case '.json':
                             self._json_files.validate_file(curr_path, path_no_root, sections_to_skip)
 
-    def output(self, dest_dir, versions: list):
+    def output(self, dest_dir: str, versions: list):
         ls_of_df = []
-        df_ini_files = self._ini_files.create_df()
-        df_json_files = self._json_files.create_df()
-        ls_of_df.append(df_ini_files)
-        ls_of_df.append(df_json_files)
+        try:
+            df_ini_files = self._ini_files.create_df()
+            df_json_files = self._json_files.create_df()
+            ls_of_df.append(df_ini_files)
+            ls_of_df.append(df_json_files)
+        except Exception as err:
+            logging.error(f"Failed to create data frames, error: {err}, type: {type(err)}")
+            raise Exception(f"Failed to create data frames, error: {err}, type: {type(err)}")
         if self._mr_model.__contains__('/'):
             self._mr_model = self._mr_model.replace('/', '_')
         filename = self._vendor + '_' + self._mr_model + '_' + self._field + '_' + "_".join(
             versions) + '_' + datetime.now().strftime('%m%d_%H%M') + '.csv'
         if not os.path.exists(os.path.join(dest_dir, 'Results')):
             os.makedirs(os.path.join(dest_dir, 'Results'))
-        pd.concat(ls_of_df).to_csv(path_or_buf=os.path.join(dest_dir, 'Results', filename), index=False, na_rep='None')
+        try:
+            pd.concat(ls_of_df).to_csv(path_or_buf=os.path.join(dest_dir, 'Results', filename), index=False, na_rep='None')
+        except Exception as err:
+            logging.error(f"Failed to create output file, error: {err}, type: {type(err)}")
+            raise Exception(f"Failed to create output file, error: {err}, type: {type(err)}")
         logging.info("Output is in: " + os.path.join(dest_dir, "Results"))
 
 
@@ -93,7 +107,7 @@ class Files:
                     df.loc[len(df)] = new_row
         return df
 
-    def add_file(self, path, df: pd.DataFrame):
+    def add_file(self, path: str, df: pd.DataFrame):
         df_path = df[df['path'] == path]
         ls_sections = (pd.unique(df_path['section'])).tolist()
         sections = {}
@@ -113,12 +127,16 @@ class Files:
     def validate_file(self, full_file_path, no_root_file_path, sections_to_skip):
         pass
 
-    def handle_key(self, file_path, section, key, actual):
+    def handle_key(self, file_path: str, section: str, key: str, actual: object):
         logging.info(f"Check key {key} in section {section} in file {file_path}")
         key_result = self._files.get(file_path, {}).get(section, {}).get(key)
-        if key_result is not None:  # Key is found in data
+        if key_result is not None:  # Key is in data
             logging.info(f"key {key} in section {section} in file {file_path} exists in data")
-            key_result.validate(actual)
+            try:
+                key_result.validate(actual)
+            except Exception as err:
+                logging.warning(
+                    f"Failed to compare values: {file_path}, {section}, {key}, error: {err}, type: {type(err)}")
         else:  # Key is not in data
             if actual != DefaultValue.DEFAULT_VALUE_JSON and actual != DefaultValue.DEFAULT_VALUE_INI:
                 logging.info(f"Adding key {key} in section {section} in file {file_path} to data")
@@ -128,7 +146,7 @@ class Files:
 
 
 class IniFiles(Files):
-    def validate_file(self, full_file_path, no_root_file_path, sections_to_skip: dict):
+    def validate_file(self, full_file_path: str, no_root_file_path: str, sections_to_skip: dict):
         config = pyiniconfig.IniConfig(full_file_path)
         for section in config.get_sections():
             options = config.get_options(section_name=section)
@@ -139,7 +157,7 @@ class IniFiles(Files):
                     except Exception as err:
                         logging.warning(f"Failed to validate: {no_root_file_path}, {section}, {key} - err: {err}, "
                                         f"type: {type(err)}")
-                elif key not in sections_to_skip.get(section, {}): # This key is not a skipped key
+                elif key not in sections_to_skip.get(section, {}):  # This key is not a skipped key
                     try:
                         self.handle_key(no_root_file_path, section, key, options[key])
                     except Exception as err:
@@ -148,28 +166,29 @@ class IniFiles(Files):
 
 
 class JsonFiles(Files):
-    def validate_file(self, full_file_path, no_root_file_path, sections_to_skip):
+    def validate_file(self, full_file_path: str, no_root_file_path: str, sections_to_skip: dict):
         try:
             with open(full_file_path, "r") as f:
                 file_data = f.read()
                 json_data = json.loads(file_data)
         except Exception as err:
             logging.warning(f"Failed to open: {no_root_file_path}, err: {err}, type: {type(err)}")
-        for tag, actual in JsonFiles.extract_tags_and_values(json_data):
-            section = tag[:tag.rfind(".")]
-            key = tag.split('.')[-1]
-            if sections_to_skip is None:
-                try:
-                    self.handle_key(no_root_file_path, section, key, actual)
-                except Exception as err:
-                    logging.warning(f"Failed to validate: {no_root_file_path}, {section}, {key} - err: {err}, "
-                                    f"type: {type(err)}")
-            elif key not in sections_to_skip.get(section, {}):
-                try:
-                    self.handle_key(no_root_file_path, section, key, actual)
-                except Exception as err:
-                    logging.warning(f"Failed to validate: {no_root_file_path}, {section}, {key} - err: {err},"
-                                    f" type: {type(err)}")
+        if file_data[0] == '{':
+            for tag, actual in JsonFiles.extract_tags_and_values(json_data):
+                section = tag[:tag.rfind(".")]
+                key = tag.split('.')[-1]
+                if sections_to_skip is None:
+                    try:
+                        self.handle_key(no_root_file_path, section, key, actual)
+                    except Exception as err:
+                        logging.warning(f"Failed to validate: {no_root_file_path}, {section}, {key} - err: {err}, "
+                                        f"type: {type(err)}")
+                elif key not in sections_to_skip.get(section, {}):
+                    try:
+                        self.handle_key(no_root_file_path, section, key, actual)
+                    except Exception as err:
+                        logging.warning(f"Failed to validate: {no_root_file_path}, {section}, {key} - err: {err},"
+                                        f" type: {type(err)}")
 
     @staticmethod
     def extract_tags_and_values(data: dict, prefix=""):
@@ -191,3 +210,4 @@ class JsonFiles(Files):
         else:
             results.append((prefix, data))
         return results
+

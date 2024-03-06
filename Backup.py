@@ -8,7 +8,7 @@ class Backup:
         self._src_dir = src_dir
         self._dest_dir = dest_dir
 
-    def backup_version(self, version_folder_name):
+    def backup_version(self, version_folder_name: str):
         # Backup folder does not exist yet
         if not os.path.exists(self._dest_dir):
             os.makedirs(self._dest_dir)
@@ -33,12 +33,12 @@ class Backup:
                         try:
                             shutil.copy2(src_file, dst_file)
                         except Exception as err:
-                            logging.warning(f"Backup failed for: {src_file}, error: {err}, type: {type(err)}")
+                            logging.warning(f"Failed to backup: {src_file}, error: {err} type: {type(err)}")
             logging.info(f"Backup completed for: {version_folder_name}")
         else:
             logging.info(f"Backup folder of {version_folder_name} already exists")
 
-    def restore(self, version_folder_name):
+    def restore(self, version_folder_name: str):
         for root, dirs, files in os.walk(os.path.join(self._dest_dir, version_folder_name), topdown=False):
             for file in files:
                 dst_rel = os.path.join(self._src_dir, os.path.relpath(root, self._dest_dir), file)

@@ -18,11 +18,21 @@ class DefaultValue:
                 match extension:
                     case '.ini':
                         if sections_to_skip is None:  # There are no skipped keys in file
-                            DefaultValueIni.set_default_values_ini(file_path)
+                            try:
+                                DefaultValueIni.set_default_values_ini(file_path)
+                            except Exception as err:
+                                logging.warning(f"Failed to set default values to: {file_path}, error: {err}, type: {type(err)}")
                         else:
-                            DefaultValueIni.set_default_values_ini_skipped_keys(file_path, sections_to_skip)
+                            try:
+                                DefaultValueIni.set_default_values_ini_skipped_keys(file_path, sections_to_skip)
+                            except Exception as err:
+                                logging.warning(f"Failed to set default values to: {file_path}, error: {err}, type: {type(err)}")
                     case '.json':
-                        DefaultValueJson.set_default_values_json(file_path)
+                        try:
+                            DefaultValueJson.set_default_values_json(file_path)
+                        except Exception as err:
+                            logging.warning(
+                                f"Failed to set default values to: {file_path}, error: {err}, type: {type(err)}")
 
 
 class DefaultValueIni:
@@ -89,14 +99,14 @@ class DefaultValueJson:
                 file_data = file_to_read.read()
         except Exception as err:
             logging.info(f"Could not read file: {file_path}, error: {err}, type: {type(err)}")
-        json_data = json.loads(file_data)
-        if json_data is dict:
+        if file_data[0] == '{':
+            json_data = json.loads(file_data)
             DefaultValueJson.set_dict_to_zeros(json_data)
-        try:
-            with open(file_path, 'w') as file_to_write:
-                json.dump(json_data, file_to_write, indent=4)
-        except Exception as err:
-            logging.info(f"Could not write to file: {file_path}, error: {err}, type: {type(err)}")
+            try:
+                with open(file_path, 'w') as file_to_write:
+                    json.dump(json_data, file_to_write, indent=4)
+            except Exception as err:
+                logging.info(f"Could not write to file: {file_path}, error: {err}, type: {type(err)}")
 
     @staticmethod
     def set_dict_to_zeros(dictionary: dict):

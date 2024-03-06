@@ -38,7 +38,7 @@ class KeyResult:
     def result(self):
         return self._result
 
-    def validate(self, actual_to_validate):
+    def validate(self, actual_to_validate): # Actual can be of any type
         self._actual = actual_to_validate
         expected_val = str(self.expected)
         logging.info(f"Validating {self._actual} vs {expected_val}")
