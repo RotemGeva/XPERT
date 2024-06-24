@@ -1,3 +1,4 @@
+import typing
 from enum import Enum
 from DefaultValue import DefaultValue
 import logging
@@ -38,7 +39,8 @@ class KeyResult:
     def result(self):
         return self._result
 
-    def validate(self, actual_to_validate): # Actual can be of any type
+    def validate(self, actual_to_validate: typing.Union[int, str, tuple, bool, float, list]):
+        # Actual can be of any type
         self._actual = actual_to_validate
         expected_val = str(self.expected)
         logging.info(f"Validating {self._actual} vs {expected_val}")
@@ -55,6 +57,7 @@ class KeyResult:
                     actual = str(self.actual)
             else:  # type(actual) is int
                 actual = str(self.actual).lower()
+        # noinspection PyUnboundLocalVariable
         if expected_val.__contains__('<'):
             self._result = Result.VALIDATE_MANUALLY
         elif expected_val != actual:
