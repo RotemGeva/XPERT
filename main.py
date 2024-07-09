@@ -18,7 +18,7 @@ def define_log() -> None:  # Log settings
     logging.basicConfig(level=logging.DEBUG,
                         filename=os.path.join(log_path, f"log_{datetime.now().strftime('%m-%d_%H-%M')}.log"),
                         filemode='w',
-                        format="%(asctime)s - %(levelname)s - %("
+                        format="%(asctime)s - %(funcName)20s() - %(levelname)s - %("
                                "message)s")
 
 
@@ -194,7 +194,7 @@ def read_user_response() -> None:
             continue
 
 
-# Main
+# Main flow
 try:
     define_log()
     args = define_inputs()
