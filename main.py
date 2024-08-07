@@ -42,11 +42,11 @@ def check_versions_exist(versions: list) -> None:  # Verify given versions exist
             raise Exception("Not all versions to check, exist in D:\\FusWs, check log file")
 
 
-def rename_versions(versions: list) -> None:  # Rename versions in dest directory
+def rename_versions(versions_to_check: list) -> None:  # Rename versions in dest directory
     dest = "D:\\FusWs"
-    curr_versions = os.listdir(dest)
-    for version in versions:
-        curr_version = [s for s in curr_versions if version in s]
+    versions_in_dir = os.listdir(dest)
+    for version in versions_to_check:
+        curr_version = [s for s in versions_in_dir if version+"_" in s]
         if curr_version and curr_version[0] != version:
             os.rename(os.path.join(dest, curr_version[0]), os.path.join(dest, version))
             logging.info(f"Renamed folder: {curr_version[0]}")
