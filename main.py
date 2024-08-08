@@ -110,7 +110,8 @@ def check_duplications(df_req) -> None:
 def filter_req(df_req: pd.DataFrame) -> pd.DataFrame:  # Filtering req file according to input parameters
     df_filtered = df_req[(df_req['Vendor'] == vendor) & (df_req['MR'] == mr_model)
                          & (df_req['FieldStrength'] == field_strength)
-                         & (df_req['path'].str.contains('|'.join(ls_fus_versions)))]
+                         & (df_req['path'].apply(lambda x: any(s + '\\' in x for s in ls_fus_versions)))]
+    #.str.contains('|'.join(ls_fus_versions)))
     if df_filtered.empty:
         logging.error(f"Requirements are not found for {vendor}, {mr_model}, {field_strength}, {ls_fus_versions}")
         raise Exception(f"Requirements are not found for {vendor}, {mr_model}, {field_strength}, {ls_fus_versions}")
