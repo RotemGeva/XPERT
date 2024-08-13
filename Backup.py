@@ -8,6 +8,14 @@ class Backup:
         self._src_dir = src_dir
         self._dest_dir = dest_dir
 
+    @property
+    def src_dir(self):
+        return self._src_dir
+
+    @property
+    def dest_dir(self):
+        return self._dest_dir
+
     def backup_version(self, version_folder_name: str):
         # Backup folder does not exist yet
         if not os.path.exists(self._dest_dir):
@@ -47,4 +55,3 @@ class Backup:
                     shutil.copy(src_rel, dst_rel)
                 except Exception as err:
                     logging.warning(f"Failed to restore {src_rel}, err: {err}, type: {type(err)}")
-

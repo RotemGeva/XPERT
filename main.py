@@ -196,11 +196,28 @@ def read_user_response() -> None:
 
 
 # Main flow
+def map_versions(selected_versions: list) -> dict:
+    logging.info(f"Starts mapping the following versions: {selected_versions}")
+    actual_versions = os.listdir("D:\\FusWs")
+    selected_versions.remove("CommonMR")
+    selected_versions = [item+"_" for item in selected_versions]
+    mapping = {key: [x for x in actual_versions if key in x][0] for key in selected_versions}
+    mapping = {key[:-len("_")]: value for key, value in mapping.items() if key.endswith("_")}
+    logging.info(f"Created the following mapping: {mapping}")
+    return mapping
+
+
+def restore_folder_names(mapping: dict, backup: Backup) -> None:
+    for fus_version in mapping.keys():
+        os.rename(os.path.join(backup.src_dir, fus_version), os.path.join(backup.dest_dir, mapping[fus_version]))
+
+
 try:
     define_log()
     args = define_inputs()
     df_req, files_to_skip_data, vendor, mr_model, field_strength, ls_fus_versions, backup_option = read_inputs(args)
     df_filtered = filter_req(df_req)
+    mapping = map_versions(ls_fus_versions)
     rename_versions(ls_fus_versions)
     if backup_option is None:  # Backup versions by default
         backup_details = backup_versions()
@@ -212,6 +229,7 @@ try:
     if backup_option is None:  # Restore files by default
         # noinspection PyUnboundLocalVariable
         restore_versions(backup_details)
+        restore_folder_names(mapping, backup_details)
     print(f"The Run for these parameters was completed: {vendor}, {mr_model}, "
           f"{field_strength}, {ls_fus_versions}")
 except Exception as err:
